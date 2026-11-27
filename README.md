@@ -1,72 +1,90 @@
-# PDF RAG Project
+# Basic PDF RAG Chatbot (Python + ChromaDB + Cross-Encoder)
 
-A simple and lightweight Retrieval-Augmented Generation (RAG) pipeline for extracting, cleaning, chunking, embedding, and querying documents from PDF files.
+A beginner-friendly, multi-file PDF RAG project configured for the Northstar Company Rulebook (`documents/northstar_company_rulebook.pdf`). It uses:
+- PyPDF for PDF text extraction
+- fixed-character chunking with overlap
+- Sentence Transformers for embeddings
+- ChromaDB for vector storage
+- a Cross-Encoder for reranking
+- Gemini for grounded chatbot answers
+- Hit Rate@K and Mean Reciprocal Rank (MRR) for retrieval evaluation
 
 ## Project Structure
 
 ```text
-├── northstar_company_rulebook.pdf  # Source PDF document
-├── clean_pdf.py                   # Cleans headers, page numbers, and whitespace
-├── cleaned_rulebook.txt           # Cleaned text output extracted from the PDF
-├── ingest.py                      # Chunks text and creates ChromaDB vector store
-├── query.py                       # Queries the vector database and retrieves answers
-├── evaluate.py                    # Evaluates retrieval quality (Hit Rate@K and MRR)
-├── index.txt                      # Sample questions for testing
-└── README.md                      # Project documentation
+├── documents/
+│   └── northstar_company_rulebook.pdf
+├── load_document.py
+├── clean_document.py
+├── chunk_document.py
+├── embeddings.py
+├── vector_database.py
+├── cross_encoder.py
+├── evaluation.py
+├── chatbot.py
+├── requirements.txt
+├── .env.example
+├── .gitignore
+└── README.md
 ```
 
-## Prerequisites & Installation
+## 1. Setup
 
-Install the required Python packages:
+Create and activate a virtual environment.
+
+### macOS
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### Windows
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## 2. Configure API key
+
+1. Your PDF is located at `documents/northstar_company_rulebook.pdf`.
+2. Copy `.env.example` to `.env`.
+3. Add your Gemini API key to `.env`.
+
+Get a key from https://aistudio.google.com/apikey
+
+## 3. Run in order
+
+Run these commands from this project folder:
 
 ```bash
-pip install pypdf langchain langchain-community langchain-chroma langchain-huggingface sentence-transformers
+python3 load_document.py
+python3 clean_document.py
+python3 chunk_document.py
+python3 embeddings.py
+python3 vector_database.py
+python3 cross_encoder.py
+python3 chatbot.py
 ```
 
-## How to Run
-
-### Step 1: Clean the PDF
-Extracts text from the PDF, removes repeating headers and page numbers, and standardizes spacing:
-
+In a separate run, evaluate retrieval:
 ```bash
-python3 clean_pdf.py
-```
-*Output: `cleaned_rulebook.txt`*
-
-### Step 2: Ingest into Vector Database
-Splits the cleaned text into chunks, generates vector embeddings using `sentence-transformers/all-MiniLM-L6-v2` locally (free), and stores them in `./chroma_db`:
-
-```bash
-python3 ingest.py
+python3 evaluation.py
 ```
 
-### Step 3: Query the Knowledge Base
-Search the Chroma vector database for answers either interactively or by passing a question as a command-line argument:
+Run the ingestion steps again whenever you replace or update the PDF.
 
-```bash
-python3 query.py
-```
+## 4. Configure evaluation questions
 
-Or pass your question directly:
+Edit `test_dataset` in `evaluation.py`. For each question, set `relevant_text` to a distinctive phrase that appears in a genuinely relevant PDF chunk. `evaluation.py` computes **Hit Rate@K** (`hit_rate_at_k`) and **Mean Reciprocal Rank** (`reciprocal_rank`).
 
-```bash
-python3 query.py "What is the policy on equipment?"
-```
+## Notes
 
-Sample questions you can try:
-- *What is the policy on equipment?*
-- *What are the working hours and attendance guidelines?*
-- *What are the rules for travel and expenses?*
-
-### Step 4: Evaluate Retrieval Metrics
-Measure retrieval performance using **Hit Rate@K** and **Mean Reciprocal Rank (MRR)** against sample rulebook queries:
-
-```bash
-python3 evaluate.py
-```
-
-## Tech Stack
-- **PDF Processing**: `pypdf`
-- **RAG Framework**: `langchain`
-- **Vector Database**: `ChromaDB`
-- **Embedding Model**: `sentence-transformers/all-MiniLM-L6-v2` (local Hugging Face embeddings)
+- First run downloads embedding and reranker models and may take several minutes.
+- Gemini calls require internet access and a valid API key.
+- The chatbot's refusal check is a simple relevance-score threshold, not a guarantee of perfect grounding. Adjust `MIN_RERANK_SCORE` after testing on your own documents.
+- Cross-Encoder reranking can only reorder the candidates returned by vector search; it cannot find chunks that initial retrieval missed.
