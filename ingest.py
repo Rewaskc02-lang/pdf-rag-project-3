@@ -9,11 +9,16 @@ documents = loader.load()
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
 chunks = text_splitter.split_documents(documents)
 
+chunk_ids = [f"chunk_{i}" for i in range(len(chunks))]
+for chunk_id, chunk in zip(chunk_ids, chunks):
+    chunk.metadata["chunk_id"] = chunk_id
+
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
 vector_db = Chroma.from_documents(
     documents=chunks,
     embedding=embeddings,
+    ids=chunk_ids,
     persist_directory="./chroma_db"
 )
 

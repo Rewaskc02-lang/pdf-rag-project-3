@@ -10,6 +10,7 @@ A simple and lightweight Retrieval-Augmented Generation (RAG) pipeline for extra
 ├── cleaned_rulebook.txt           # Cleaned text output extracted from the PDF
 ├── ingest.py                      # Chunks text and creates ChromaDB vector store
 ├── query.py                       # Queries the vector database and retrieves answers
+├── evaluate.py                    # Evaluates retrieval quality (Hit Rate@K and MRR)
 ├── index.txt                      # Sample questions for testing
 └── README.md                      # Project documentation
 ```
@@ -56,6 +57,13 @@ Sample questions you can try:
 - *What is the policy on equipment?*
 - *What are the working hours and attendance guidelines?*
 - *What are the rules for travel and expenses?*
+
+### Step 4: Evaluate Retrieval Metrics
+Measure retrieval performance using **Hit Rate@K** and **Mean Reciprocal Rank (MRR)** against sample rulebook queries:
+
+```bash
+python3 evaluate.py
+```
 
 ## Tech Stack
 - **PDF Processing**: `pypdf`
