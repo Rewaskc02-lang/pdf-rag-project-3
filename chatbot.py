@@ -1,4 +1,5 @@
 import os
+import time
 from dotenv import load_dotenv
 from google import genai
 
@@ -14,12 +15,36 @@ if not API_KEY:
 
 # Change the model name here if your Google AI Studio account does not offer it.
 GEMINI_MODEL = "gemini-3.8-flash"
+FALLBACK_MODELS = [GEMINI_MODEL, "gemini-3.8-flash-lite", "gemini-2.5-flash-lite"]
 
 # Cross-Encoder scores are not probabilities. This is only a starter threshold;
 # test and tune it using questions from your own PDF.
 MIN_RERANK_SCORE = 0.0
 
 client = genai.Client(api_key=API_KEY)
+
+
+def _generate_with_retry(prompt, max_retries=3):
+    """Call Gemini with exponential backoff on 503/429 and fallback models."""
+    last_error = None
+    for model_name in FALLBACK_MODELS:
+        for attempt in range(max_retries):
+            try:
+                return client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+            except Exception as error:
+                last_error = error
+                err_str = str(error)
+                is_transient = "503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str
+                if is_transient and attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                if "404" in err_str or "NOT_FOUND" in err_str or is_transient:
+                    break
+                raise
+    raise last_error
 
 
 def ask_question_with_sources(question):
@@ -54,10 +79,7 @@ QUESTION:
 ANSWER:
 """
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt
-    )
+    response = _generate_with_retry(prompt)
     answer = getattr(response, "text", None)
     return (answer.strip() if answer else "No text response was returned."), documents
 
