@@ -1,0 +1,5 @@
+DO ALL THIS QUESTIONS :
+
+python3 query.py "What is the policy on equipment?"
+python3 query.py "What are the working hours and attendance guidelines?"
+python3 query.py "What are the rules for travel and expenses?"
