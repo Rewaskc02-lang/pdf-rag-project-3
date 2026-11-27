@@ -22,6 +22,7 @@ A beginner-friendly, multi-file PDF RAG project configured for the Northstar Com
 ├── cross_encoder.py
 ├── evaluation.py
 ├── chatbot.py
+├── app.py
 ├── requirements.txt
 ├── .env.example
 ├── .gitignore
@@ -69,6 +70,11 @@ python3 embeddings.py
 python3 vector_database.py
 python3 cross_encoder.py
 python3 chatbot.py
+```
+
+Or launch the web UI with Streamlit:
+```bash
+streamlit run app.py
 ```
 
 In a separate run, evaluate retrieval:

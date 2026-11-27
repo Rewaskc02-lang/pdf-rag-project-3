@@ -22,15 +22,16 @@ MIN_RERANK_SCORE = 0.0
 client = genai.Client(api_key=API_KEY)
 
 
-def ask_question(question):
+def ask_question_with_sources(question):
+    """Answer a question using reranked chunks and return (answer, documents)."""
     documents = rerank_documents(question, top_k=5, fetch_k=10)
 
     if not documents:
-        return "I don't know. The answer is not in the document."
+        return "I don't know. The answer is not in the document.", []
 
     best_score = documents[0]["rerank_score"]
     if best_score < MIN_RERANK_SCORE:
-        return "I don't know. The answer is not in the document."
+        return "I don't know. The answer is not in the document.", documents
 
     context = "\n\n".join(
         f"[Page {doc['page']}] {doc['text']}" for doc in documents
@@ -58,7 +59,12 @@ ANSWER:
         contents=prompt
     )
     answer = getattr(response, "text", None)
-    return answer.strip() if answer else "No text response was returned."
+    return (answer.strip() if answer else "No text response was returned."), documents
+
+
+def ask_question(question):
+    answer, _ = ask_question_with_sources(question)
+    return answer
 
 
 if __name__ == "__main__":
