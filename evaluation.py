@@ -6,7 +6,7 @@ from vector_database import collection
 test_dataset = [
     {
         "question": "What is the policy on equipment?",
-        "relevant_text": "Company laptops, software, accounts, networks"
+        "relevant_text": "Keep equipment secure"
     },
     {
         "question": "What are the working hours and attendance guidelines?",

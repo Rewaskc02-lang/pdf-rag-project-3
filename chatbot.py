@@ -18,14 +18,14 @@ GEMINI_MODEL = "gemini-3.8-flash"
 FALLBACK_MODELS = [GEMINI_MODEL, "gemini-3.5-flash-lite"]
 
 # Cross-Encoder (ms-marco-MiniLM-L-6-v2) outputs raw logits, which can be negative.
-# -5.0 filters out clearly unrelated chunks while allowing valid rulebook matches.
-MIN_RERANK_SCORE = -5.0
+# -8.0 filters out clearly unrelated chunks while allowing valid rulebook matches.
+MIN_RERANK_SCORE = -8.0
 
 client = genai.Client(api_key=API_KEY)
 
 
-def _generate_with_retry(prompt, max_retries=3):
-    """Call Gemini with exponential backoff on 503/429 and fallback models."""
+def _generate_with_retry(prompt, max_retries=2):
+    """Call Gemini with a short retry on 503/429 and fast fallback models."""
     last_error = None
     for model_name in FALLBACK_MODELS:
         for attempt in range(max_retries):
@@ -39,7 +39,7 @@ def _generate_with_retry(prompt, max_retries=3):
                 err_str = str(error)
                 is_transient = "503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str
                 if is_transient and attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
+                    time.sleep(0.5)
                     continue
                 if "404" in err_str or "NOT_FOUND" in err_str or is_transient:
                     break
