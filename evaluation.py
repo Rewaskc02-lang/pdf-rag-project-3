@@ -51,10 +51,10 @@ def reciprocal_rank(retrieved_ids, relevant_ids):
     return 0.0
 
 
-def evaluate_retrieval(dataset, k=5):
+def evaluate_retrieval(dataset, k_values=(1, 2, 3, 5)):
     if not dataset:
         print("Test dataset is empty.")
-        return 0.0, 0.0
+        return None
 
     stored = collection.get(include=["documents"])
     all_ids = stored.get("ids", [])
@@ -62,10 +62,12 @@ def evaluate_retrieval(dataset, k=5):
 
     if not all_ids:
         print("Vector database is empty. Run vector_database.py first.")
-        return 0.0, 0.0
+        return None
 
-    hit_rates = []
+    max_k = max(k_values)
+    hit_totals = {k: 0 for k in k_values}
     reciprocal_ranks = []
+    per_query_results = []
 
     for item in dataset:
         question = item["question"]
@@ -78,30 +80,50 @@ def evaluate_retrieval(dataset, k=5):
         }
 
         # Evaluate the final reranked top-K results.
-        results = rerank_documents(question, top_k=k, fetch_k=10)
+        results = rerank_documents(question, top_k=max_k, fetch_k=10)
         retrieved_ids = [result["id"] for result in results]
 
-        hr = hit_rate_at_k(retrieved_ids, relevant_ids, k=k)
+        hits_for_query = {}
+        for k in k_values:
+            hr = hit_rate_at_k(retrieved_ids, relevant_ids, k=k)
+            hits_for_query[k] = hr
+            hit_totals[k] += hr
+
         rr = reciprocal_rank(retrieved_ids, relevant_ids)
-        hit_rates.append(hr)
         reciprocal_ranks.append(rr)
 
+        per_query_results.append({
+            "question": question,
+            "relevant_ids": sorted(relevant_ids),
+            "retrieved_ids": retrieved_ids,
+            "hits": hits_for_query,
+            "reciprocal_rank": rr,
+        })
+
         print(f"Question: {question}")
-        print(f"  Relevant IDs : {sorted(relevant_ids)}")
-        print(f"  Retrieved IDs: {retrieved_ids}")
-        print(f"  Hit Rate@{k}  : {hr}")
+        print(f"  Relevant IDs   : {sorted(relevant_ids)}")
+        print(f"  Retrieved IDs  : {retrieved_ids}")
+        for k in k_values:
+            print(f"  Hit@{k}          : {hits_for_query[k]}")
         print(f"  Reciprocal Rank: {rr:.4f}\n")
 
-    hit_rate_score = sum(hit_rates) / len(dataset)
-    mrr_score = sum(reciprocal_ranks) / len(dataset)
+    total = len(dataset)
+    hit_rates = {k: hit_totals[k] / total for k in k_values}
+    mrr_score = sum(reciprocal_ranks) / total
 
     print("========== RETRIEVAL EVALUATION ==========")
-    print(f"Total questions: {len(dataset)}")
-    print(f"Successful hits: {sum(hit_rates)}")
-    print(f"Hit Rate@{k}: {hit_rate_score:.2f} ({hit_rate_score * 100:.2f}%)")
+    print(f"Total questions: {total}")
+    for k in k_values:
+        print(f"Hit@{k}: {hit_rates[k]:.2f} ({hit_rates[k] * 100:.2f}%) [{hit_totals[k]}/{total}]")
     print(f"Mean Reciprocal Rank (MRR): {mrr_score:.4f}")
-    return hit_rate_score, mrr_score
+
+    return {
+        "total": total,
+        "hit_rates": hit_rates,
+        "mrr": mrr_score,
+        "per_query": per_query_results,
+    }
 
 
 if __name__ == "__main__":
-    evaluate_retrieval(test_dataset, k=5)
+    evaluate_retrieval(test_dataset, k_values=(1, 2, 3, 5))

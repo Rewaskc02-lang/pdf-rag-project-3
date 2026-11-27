@@ -1,6 +1,7 @@
 import streamlit as st
 
 from chatbot import ask_question_with_sources
+from evaluation import evaluate_retrieval, test_dataset
 
 st.set_page_config(
     page_title="Northstar Rulebook RAG Chatbot",
@@ -28,6 +29,29 @@ with st.sidebar:
     if st.button("Clear Chat", type="secondary", use_container_width=True):
         st.session_state["messages"] = []
         st.rerun()
+
+    st.divider()
+    st.subheader("Retrieval Evaluation")
+    if st.button("Run Hit@1, Hit@2, Hit@3, Hit@5 & MRR", use_container_width=True):
+        with st.spinner("Evaluating retrieval metrics..."):
+            st.session_state["eval_summary"] = evaluate_retrieval(
+                test_dataset, k_values=(1, 2, 3, 5)
+            )
+
+if st.session_state.get("eval_summary"):
+    summary = st.session_state["eval_summary"]
+    with st.expander("Retrieval Evaluation Metrics (Hit@K & MRR)", expanded=True):
+        cols = st.columns(5)
+        for idx, k in enumerate((1, 2, 3, 5)):
+            cols[idx].metric(f"Hit@{k}", f"{summary['hit_rates'][k] * 100:.0f}%")
+        cols[4].metric("MRR", f"{summary['mrr']:.4f}")
+
+        for row in summary["per_query"]:
+            st.markdown(
+                f"- **{row['question']}** — "
+                + ", ".join(f"`Hit@{k}: {row['hits'][k]}`" for k in (1, 2, 3, 5))
+                + f", `RR: {row['reciprocal_rank']:.2f}`"
+            )
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
