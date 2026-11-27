@@ -15,11 +15,11 @@ if not API_KEY:
 
 # Change the model name here if your Google AI Studio account does not offer it.
 GEMINI_MODEL = "gemini-3.8-flash"
-FALLBACK_MODELS = [GEMINI_MODEL, "gemini-3.8-flash-lite", "gemini-2.5-flash-lite"]
+FALLBACK_MODELS = [GEMINI_MODEL, "gemini-3.5-flash-lite"]
 
-# Cross-Encoder scores are not probabilities. This is only a starter threshold;
-# test and tune it using questions from your own PDF.
-MIN_RERANK_SCORE = 0.0
+# Cross-Encoder (ms-marco-MiniLM-L-6-v2) outputs raw logits, which can be negative.
+# -5.0 filters out clearly unrelated chunks while allowing valid rulebook matches.
+MIN_RERANK_SCORE = -5.0
 
 client = genai.Client(api_key=API_KEY)
 
